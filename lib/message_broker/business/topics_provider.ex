@@ -1,8 +1,8 @@
 defmodule MessageBroker.TopicsProvider do
   use GenServer
 
-  def start_link(args) do
-    GenServer.start_link(__MODULE__, topics: [], name: __MODULE__)
+  def start_link(_args) do
+    GenServer.start_link(__MODULE__, topics: ['user', 'tweet'], name: __MODULE__)
   end
 
   @impl true

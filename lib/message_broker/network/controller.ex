@@ -17,25 +17,31 @@ defmodule MessageBroker.Controller do
     loop_acceptor(socket)
   end
 
-  def subscribe(socket, _topic) do
+  def subscribe(socket, topic) do
+    IO.puts("SUBSCRIBING")
     IO.inspect(socket)
-    IO.puts("SUBSCRIBE")
+    GenServer.cast(MessageBroker.SubscribersKeeper, {:subscribe, socket, topic})
   end
 
-  def unsubscribe(_socket, _topic) do
-    IO.puts("UNSUBSCRIBE")
+  def unsubscribe(socket, topic) do
+    IO.puts("UNSUBSCRIBING")
+    GenServer.cast(MessageBroker.SubscribersKeeper, {:unsubscribe, socket, topic})
   end
 
   def acknowledge(_socket, _topic) do
+    # will remove message from queue
     IO.puts("NEW ACKNOWLEDGMENT")
   end
 
   def publish(_socket, _topic, _message) do
+    # will add message to queue
     IO.puts("NEW PUBLISHMENT")
   end
 
   defp loop_acceptor(socket) do
     {:ok, client} = :gen_tcp.accept(socket)
+
+    # :queue.new()
 
     {:ok, pid} =
       Task.Supervisor.start_child(MessageBroker.ConnectionsSupervisor, fn ->
