@@ -6,9 +6,12 @@ defmodule MessageBroker.QueueManager do
   end
 
   @impl true
-  def handle_call({:new_sub}, _from, state) do
-    # will add a new struct to the state
-    # will
+  def handle_call({:new_sub, sub}, _from, state) do
+    # {:ok, pid} =
+    #   DynamicSupervisor.start_child(
+    #     MessageBroker.QueueSupervisor,
+    #     subt: sub
+    #   )
 
     {:reply, state, state}
   end

@@ -6,8 +6,10 @@ defmodule MessageBroker.Application do
     children = [
       {MessageBroker.TopicsProvider, []},
       {MessageBroker.QueueManager, []},
+      {MessageBroker.QueueSupervisor, []},
       {MessageBroker.SubscribersKeeper, []},
       {Task.Supervisor, name: MessageBroker.ConnectionsSupervisor},
+      {Task.Supervisor, name: MessageBroker.QueuesSupervisor},
       {MessageBroker.Controller, []}
     ]
 

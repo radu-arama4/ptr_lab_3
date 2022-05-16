@@ -14,6 +14,8 @@ defmodule MessageBroker.SubscribersKeeper do
         # TODO check if the subscriber already exists
         # TODO serialize map
 
+        # send to queue manager
+
         MessageBroker.Controller.write_line(
           "{\"action\": \"ACKNOWLEDGE\", \"topic\": \"\", \"message\": {}}\r\n",
           socket
