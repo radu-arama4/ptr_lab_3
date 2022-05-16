@@ -104,10 +104,6 @@ defmodule MessageBroker.Controller do
 
     validate_message(message, socket)
 
-    socket
-    |> read_line()
-    |> write_line(socket)
-
     serve(socket)
   end
 

@@ -2,7 +2,7 @@ defmodule MessageBroker.SubscribersKeeper do
   use GenServer
 
   def start_link(_args) do
-    GenServer.start_link(__MODULE__, subscribers: [], name: __MODULE__)
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
   @impl true
@@ -10,16 +10,16 @@ defmodule MessageBroker.SubscribersKeeper do
     # will check if the requested topic is present and based on that will store it in the internal state
     case validate_topic(topic) do
       true ->
+        IO.puts("FOUND TOPIC")
         # TODO check if the subscriber already exists
         # TODO serialize map
 
-        # line = %Message{:action => "ACKNOWLEDGE", :topic => "", :message => ""}
-        # mess_to_send = Poison.encode(Enum.to_list(line))
-        # MessageBroker.Controller.write_line(mess_to_send, socket)
-        MessageBroker.Controller.write_line("ACK", socket)
+        MessageBroker.Controller.write_line(
+          "{\"action\": \"ACKNOWLEDGE\", \"topic\": \"\", \"message\": {}}\r\n",
+          socket
+        )
 
-        {:noreply,
-         subscribers: Enum.concat(state.subscribers, [%{:socket => socket, :topic => topic}])}
+        {:noreply, subscribers: Enum.concat(state, [%{:socket => socket, :topic => topic}])}
 
       false ->
         # later send message back
@@ -29,7 +29,7 @@ defmodule MessageBroker.SubscribersKeeper do
 
   @impl true
   def handle_cast({:unsubscribe, socket, topic}, state) do
-    {:noreply, List.delete(state.subscribers, %{:socket => socket, :topic => topic})}
+    {:noreply, List.delete(state, %{:socket => socket, :topic => topic})}
   end
 
   defp validate_topic(topic) do
@@ -43,6 +43,7 @@ defmodule MessageBroker.SubscribersKeeper do
 
   @impl true
   def init(args) do
+    IO.puts("SUBSCRIBERS KEEPER")
     {:ok, args}
   end
 end

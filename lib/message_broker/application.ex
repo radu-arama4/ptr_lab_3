@@ -4,10 +4,10 @@ defmodule MessageBroker.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      {MessageBroker.TopicsProvider, [topics: ['users', 'tweets']]},
+      {MessageBroker.TopicsProvider, []},
+      {MessageBroker.SubscribersKeeper, []},
       {Task.Supervisor, name: MessageBroker.ConnectionsSupervisor},
-      {MessageBroker.Controller, []},
-      {MessageBroker.SubscribersKeeper, []}
+      {MessageBroker.Controller, []}
     ]
 
     opts = [strategy: :one_for_one, name: MessageBroker.Supervisor]
