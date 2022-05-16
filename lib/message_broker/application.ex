@@ -5,6 +5,7 @@ defmodule MessageBroker.Application do
   def start(_type, _args) do
     children = [
       {MessageBroker.TopicsProvider, []},
+      {MessageBroker.QueueManager, []},
       {MessageBroker.SubscribersKeeper, []},
       {Task.Supervisor, name: MessageBroker.ConnectionsSupervisor},
       {MessageBroker.Controller, []}
