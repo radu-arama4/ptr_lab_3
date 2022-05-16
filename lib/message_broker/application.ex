@@ -4,6 +4,8 @@ defmodule MessageBroker.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      {MessageBroker.TopicsProvider, [topics: ['users', 'tweets']]},
+      {Task.Supervisor, name: MessageBroker.ConnectionsSupervisor},
       {MessageBroker.Controller, []},
       {MessageBroker.SubscribersKeeper, []}
     ]

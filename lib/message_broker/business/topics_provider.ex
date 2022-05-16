@@ -1,11 +1,13 @@
 defmodule MessageBroker.TopicsProvider do
   use GenServer
 
-  def start_link(_args) do
-    GenServer.start_link(__MODULE__, subscribers: [], name: __MODULE__)
+  def start_link(args) do
+    GenServer.start_link(__MODULE__, topics: [], name: __MODULE__)
   end
 
-  def handle_call({:get_topics}, from, state) do
+  @impl true
+  def handle_call({:get_topics}, _from, state) do
+    {:reply, state.topics, state}
   end
 
   @impl true
