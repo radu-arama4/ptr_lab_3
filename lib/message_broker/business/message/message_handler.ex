@@ -12,7 +12,7 @@ defmodule MessageBroker.MessageHandler do
     case validate_topic(topic) do
       true ->
         # also will store the messages to some storage
-        {:noreply, Enum.concat(state, [message])}
+        {:noreply, Enum.concat(state, [{message, topic}])}
 
       false ->
         # later send message back
@@ -29,13 +29,27 @@ defmodule MessageBroker.MessageHandler do
     end
   end
 
-  @impl true
-  def init(args) do
-    IO.puts("MESSAGE HANDLER")
-    extract_messages()
-    {:ok, args}
+  def extract_messages() do
+    Process.send_after(self(), {:extract_and_send}, 100)
   end
 
-  def extract_messages() do
+  @impl true
+  def handle_info({:extract_and_send}, state) do
+    # will extract from storage normally
+    if !Enum.empty?(state) do
+      {mess, topic} = Enum.at(state, 0)
+      GenServer.cast(MessageBroker.QueueManager, {:new_mess, mess, topic})
+      extract_messages()
+      {:noreply, List.delete_at(state, 0)}
+    else
+      extract_messages()
+      {:noreply, state}
+    end
+  end
+
+  @impl true
+  def init(args) do
+    extract_messages()
+    {:ok, args}
   end
 end

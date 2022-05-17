@@ -33,8 +33,9 @@ defmodule MessageBroker.Controller do
     IO.puts("NEW ACKNOWLEDGMENT")
   end
 
-  def publish(_socket, _topic, _message) do
-    # will add message to queue
+  def publish(_socket, topic, message) do
+    GenServer.cast(MessageBroker.MessageHandler, {:new_message, message, topic})
+
     IO.puts("NEW PUBLISHMENT")
   end
 
@@ -52,8 +53,8 @@ defmodule MessageBroker.Controller do
     loop_acceptor(socket)
   end
 
-  def parse_message(message) do
-    case Poison.decode(message, as: %Message{}) do
+  def parse_message(mess) do
+    case Poison.decode(mess, as: %Message{}) do
       {:ok, %Message{:action => "SUBSCRIBE", :topic => topic}} ->
         {:ok, {:subscribe, topic}}
 
@@ -87,7 +88,7 @@ defmodule MessageBroker.Controller do
       {:ok, {:acknowledge, topic}} ->
         acknowledge(socket, topic)
 
-      {:ok, {:publish, topic, message}} ->
+      {:ok, {:publish_message, topic, message}} ->
         publish(socket, topic, message)
 
       {:error, _error} ->

@@ -4,6 +4,7 @@ defmodule MessageBroker.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      {MessageBroker.MessageHandler, []},
       {MessageBroker.TopicsProvider, []},
       {MessageBroker.QueueManager, []},
       {MessageBroker.QueueSupervisor, []},
