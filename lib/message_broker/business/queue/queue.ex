@@ -11,8 +11,14 @@ defmodule MessageBroker.Queue do
 
   @impl true
   def init(args) do
+    IO.puts("NEW QUEUE")
     work()
     {:ok, args}
+  end
+
+  @impl true
+  def handle_call({:get_sub}, _from, state) do
+    {:reply, state[:sub], state}
   end
 
   @impl true
@@ -25,6 +31,8 @@ defmodule MessageBroker.Queue do
 
   @impl true
   def handle_cast({:ack}, state) do
+    # TODO remove from queue
+
     {
       :noreply,
       %{:sub => state[:sub], :ack => true, :queue => state[:queue]}
@@ -34,10 +42,11 @@ defmodule MessageBroker.Queue do
   @impl true
   def handle_info({:send}, state) do
     if state[:ack] == true do
-      message = state[:queue].out()
+      queue = state[:queue]
+      message = :queue.out(queue)
       # send message
       IO.inspect(message)
-      MessageBroker.Controller.write_line(message, state[:sub])
+      MessageBroker.Controller.write_line("Will format the message later", state[:sub])
       {:noreply, %{:sub => state[:sub], :ack => false, :queue => state[:queue]}}
       work()
     else

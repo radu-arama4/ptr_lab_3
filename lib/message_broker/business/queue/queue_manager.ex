@@ -7,10 +7,12 @@ defmodule MessageBroker.QueueManager do
 
   @impl true
   def handle_cast({:new_sub, sub, topic}, state) do
+    IO.puts("NEW SUB")
+
     {:ok, pid} =
       DynamicSupervisor.start_child(
         MessageBroker.QueueSupervisor,
-        sub
+        {MessageBroker.Queue, [sub: sub]}
       )
 
     queues = Map.get(state, topic)
@@ -23,6 +25,21 @@ defmodule MessageBroker.QueueManager do
     queues = Map.get(state, topic)
 
     Enum.each(queues, fn queue -> GenServer.cast(queue, {:new_msg, mess}) end)
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:ack, sub, topic}, state) do
+    queues = Map.get(state, topic)
+
+    Enum.each(queues, fn queue ->
+      received_sub = GenServer.call(queue, {:get_sub})
+
+      if sub == received_sub do
+        GenServer.cast(queue, {:ack})
+      end
+    end)
 
     {:noreply, state}
   end

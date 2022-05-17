@@ -28,14 +28,14 @@ defmodule MessageBroker.Controller do
     GenServer.cast(MessageBroker.SubscribersKeeper, {:unsubscribe, socket, topic})
   end
 
-  def acknowledge(_socket, _topic) do
-    # will remove message from queue
+  def acknowledge(socket, topic) do
+    # will remove message from queue and from message handler
+    GenServer.cast(MessageBroker.QueueManager, {:ack, socket, topic})
     IO.puts("NEW ACKNOWLEDGMENT")
   end
 
   def publish(_socket, topic, message) do
     GenServer.cast(MessageBroker.MessageHandler, {:new_message, message, topic})
-
     IO.puts("NEW PUBLISHMENT")
   end
 
