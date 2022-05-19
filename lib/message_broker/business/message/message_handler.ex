@@ -6,16 +6,19 @@ defmodule MessageBroker.MessageHandler do
   end
 
   @impl true
-  def handle_cast({:new_message, message, topic}, state) do
+  def handle_cast({:new_message, message, topic, socket}, state) do
     # will also distribute the message based on topic
 
     case validate_topic(topic) do
       true ->
+        IO.puts("NEW MESSAGE AND TOPIC VALIDATED!")
         # also will store the messages to some storage
+
+        AckUtil.send_back_ack("Message received and validated!", "", socket)
         {:noreply, Enum.concat(state, [{message, topic}])}
 
       false ->
-        # later send message back
+        AckUtil.send_back_ack("Message received but not validated!", "", socket)
         {:noreply, state}
     end
   end
@@ -37,8 +40,8 @@ defmodule MessageBroker.MessageHandler do
   def handle_info({:extract_and_send}, state) do
     # will extract from storage normally
     if !Enum.empty?(state) do
-      {mess, topic} = Enum.at(state, 0)
-      GenServer.cast(MessageBroker.QueueManager, {:new_mess, mess, topic})
+      {message, topic} = Enum.at(state, 0)
+      GenServer.cast(MessageBroker.QueueManager, {:new_mess, message, topic})
       extract_messages()
       {:noreply, List.delete_at(state, 0)}
     else

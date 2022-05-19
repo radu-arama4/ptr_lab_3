@@ -11,26 +11,21 @@ defmodule MessageBroker.SubscribersKeeper do
     case validate_topic(topic) do
       true ->
         IO.puts("FOUND TOPIC")
-        # TODO check if the subscriber already exists
-        # TODO serialize map
-
         GenServer.cast(MessageBroker.QueueManager, {:new_sub, socket, topic})
-
-        MessageBroker.Controller.write_line(
-          "{\"action\": \"ACKNOWLEDGE\", \"topic\": \"\", \"message\": {}}\r\n",
-          socket
-        )
+        AckUtil.send_back_ack("User subscribed!", topic, socket)
 
         {:noreply, subscribers: Enum.concat(state, [%{:socket => socket, :topic => topic}])}
 
       false ->
         # later send message back
+        AckUtil.send_back_ack("Not existing topic!", topic, socket)
         {:noreply, state}
     end
   end
 
   @impl true
   def handle_cast({:unsubscribe, socket, topic}, state) do
+    GenServer.cast(MessageBroker.QueueManager, {:delete_sub, socket, topic})
     {:noreply, List.delete(state, %{:socket => socket, :topic => topic})}
   end
 

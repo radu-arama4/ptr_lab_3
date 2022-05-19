@@ -34,15 +34,13 @@ defmodule MessageBroker.Controller do
     IO.puts("NEW ACKNOWLEDGMENT")
   end
 
-  def publish(_socket, topic, message) do
-    GenServer.cast(MessageBroker.MessageHandler, {:new_message, message, topic})
+  def publish(socket, topic, message) do
+    GenServer.cast(MessageBroker.MessageHandler, {:new_message, message, topic, socket})
     IO.puts("NEW PUBLISHMENT")
   end
 
   defp loop_acceptor(socket) do
     {:ok, client} = :gen_tcp.accept(socket)
-
-    # :queue.new()
 
     {:ok, pid} =
       Task.Supervisor.start_child(MessageBroker.ConnectionsSupervisor, fn ->

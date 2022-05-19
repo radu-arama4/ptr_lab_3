@@ -17,7 +17,39 @@ defmodule MessageBroker.QueueManager do
 
     queues = Map.get(state, topic)
 
-    {:reply, Map.put(state, topic, Enum.concat(queues, [pid]))}
+    {:noreply, Map.put(state, topic, Enum.concat(queues, [pid]))}
+  end
+
+  @impl true
+  def handle_cast({:delete_sub, sub, topic}, state) do
+    queues = Map.get(state, topic)
+
+    # also send back ACK
+
+    Enum.each(queues, fn queue ->
+      received_sub = GenServer.call(queue, {:get_sub})
+
+      if sub == received_sub do
+        DynamicSupervisor.terminate_child(MessageBroker.QueueSupervisor, queue)
+
+        GenServer.cast(
+          MessageBroker.QueueManager,
+          {:delete_queue_from_internal_state, queue, topic}
+        )
+      end
+    end)
+
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:delete_queue_from_internal_state, queue, topic}, state) do
+    queues = Map.get(state, topic)
+
+    {:noreply,
+     Map.get_and_update(state, topic, fn current_list ->
+       {current_list, List.delete(queues, queue)}
+     end)}
   end
 
   @impl true
@@ -33,6 +65,7 @@ defmodule MessageBroker.QueueManager do
   def handle_cast({:ack, sub, topic}, state) do
     queues = Map.get(state, topic)
 
+    # finds the subscriber to be acknowledged
     Enum.each(queues, fn queue ->
       received_sub = GenServer.call(queue, {:get_sub})
 

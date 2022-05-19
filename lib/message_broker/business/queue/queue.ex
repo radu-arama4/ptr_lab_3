@@ -23,32 +23,37 @@ defmodule MessageBroker.Queue do
 
   @impl true
   def handle_cast({:new_msg, message}, state) do
+    IO.puts("QUEUE RECEIVED MESSAGE")
+
     {
       :noreply,
-      %{:sub => state[:sub], :ack => state[:ack], :queue => :queue.in(state[:queue], message)}
+      %{:sub => state[:sub], :ack => state[:ack], :queue => :queue.in(message, state[:queue])}
     }
   end
 
   @impl true
   def handle_cast({:ack}, state) do
-    # TODO remove from queue
+    IO.puts("ACK!! REMOVING MESSAGE")
 
     {
       :noreply,
-      %{:sub => state[:sub], :ack => true, :queue => state[:queue]}
+      %{:sub => state[:sub], :ack => true, :queue => :queue.peek(state[:queue])}
     }
   end
 
   @impl true
   def handle_info({:send}, state) do
-    if state[:ack] == true do
+    if state[:ack] == true && !:queue.is_empty(state[:queue]) do
       queue = state[:queue]
-      message = :queue.out(queue)
+      message = :queue.head(queue)
       # send message
       IO.inspect(message)
-      MessageBroker.Controller.write_line("Will format the message later", state[:sub])
-      {:noreply, %{:sub => state[:sub], :ack => false, :queue => state[:queue]}}
+
+      {:ok, message_to_send} = Poison.encode(message)
+
+      MessageBroker.Controller.write_line(message_to_send, state[:sub])
       work()
+      {:noreply, %{:sub => state[:sub], :ack => false, :queue => state[:queue]}}
     else
       work()
       {:noreply, state}
