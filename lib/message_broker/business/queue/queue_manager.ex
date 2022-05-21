@@ -1,5 +1,6 @@
 defmodule MessageBroker.QueueManager do
   use GenServer
+  require Logger
 
   def start_link(_args) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
@@ -7,7 +8,7 @@ defmodule MessageBroker.QueueManager do
 
   @impl true
   def handle_cast({:new_sub, sub, topic}, state) do
-    IO.puts("NEW SUB")
+    Logger.info("New subscriber #{inspect(sub)} to topic #{inspect(topic)}")
 
     {:ok, pid} =
       DynamicSupervisor.start_child(
@@ -24,13 +25,14 @@ defmodule MessageBroker.QueueManager do
   def handle_cast({:delete_sub, sub, topic}, state) do
     queues = Map.get(state, topic)
 
-    # also send back ACK
-
     Enum.each(queues, fn queue ->
       received_sub = GenServer.call(queue, {:get_sub})
 
       if sub == received_sub do
         DynamicSupervisor.terminate_child(MessageBroker.QueueSupervisor, queue)
+
+        Logger.info("Consumer #{inspect(sub)} unsubscribed from #{inspect(topic)}")
+        AckUtil.send_back_ack("User unsubscribed!", topic, sub)
 
         GenServer.cast(
           MessageBroker.QueueManager,
@@ -65,9 +67,12 @@ defmodule MessageBroker.QueueManager do
   def handle_cast({:ack, sub, topic}, state) do
     queues = Map.get(state, topic)
 
-    # finds the subscriber to be acknowledged
     Enum.each(queues, fn queue ->
       received_sub = GenServer.call(queue, {:get_sub})
+
+      Logger.info(
+        "Acknowledge received. Removing last message for #{inspect(sub)} from topic #{inspect(topic)}"
+      )
 
       if sub == received_sub do
         GenServer.cast(queue, {:ack})
@@ -79,8 +84,9 @@ defmodule MessageBroker.QueueManager do
 
   @impl true
   def init(_args) do
-    # will fetch all the topics
     topics = GenServer.call(MessageBroker.TopicsProvider, {:get_topics})
+
+    Logger.info("queue_manager initializing with topics: #{inspect(topics)}")
 
     {:ok,
      topics

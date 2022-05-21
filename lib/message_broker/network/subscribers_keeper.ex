@@ -1,5 +1,6 @@
 defmodule MessageBroker.SubscribersKeeper do
   use GenServer
+  require Logger
 
   def start_link(_args) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
@@ -10,14 +11,12 @@ defmodule MessageBroker.SubscribersKeeper do
     # will check if the requested topic is present and based on that will store it in the internal state
     case validate_topic(topic) do
       true ->
-        IO.puts("FOUND TOPIC")
         GenServer.cast(MessageBroker.QueueManager, {:new_sub, socket, topic})
         AckUtil.send_back_ack("User subscribed!", topic, socket)
 
         {:noreply, subscribers: Enum.concat(state, [%{:socket => socket, :topic => topic}])}
 
       false ->
-        # later send message back
         AckUtil.send_back_ack("Not existing topic!", topic, socket)
         {:noreply, state}
     end
@@ -40,7 +39,7 @@ defmodule MessageBroker.SubscribersKeeper do
 
   @impl true
   def init(args) do
-    IO.puts("SUBSCRIBERS KEEPER")
+    Logger.info("subscribers_keeper initializing")
     {:ok, args}
   end
 end

@@ -1,17 +1,16 @@
 defmodule MessageBroker.Queue do
   use GenServer
+  require Logger
 
   def start_link(args) do
     queue = :queue.new()
 
-    GenServer.start_link(__MODULE__, %{:sub => args[:sub], :ack => true, :queue => queue},
-      name: __MODULE__
-    )
+    GenServer.start_link(__MODULE__, %{:sub => args[:sub], :ack => true, :queue => queue}, args)
   end
 
   @impl true
   def init(args) do
-    IO.puts("NEW QUEUE")
+    Logger.info("New Queue defined")
     work()
     {:ok, args}
   end
@@ -23,7 +22,7 @@ defmodule MessageBroker.Queue do
 
   @impl true
   def handle_cast({:new_msg, message}, state) do
-    IO.puts("QUEUE RECEIVED MESSAGE")
+    Logger.info("New message in queue for subscriber #{inspect(state[:sub])}")
 
     {
       :noreply,
@@ -33,11 +32,13 @@ defmodule MessageBroker.Queue do
 
   @impl true
   def handle_cast({:ack}, state) do
-    IO.puts("ACK!! REMOVING MESSAGE")
+    {_peek, new_queue} = :queue.out(state[:queue])
+
+    Logger.info("State - #{inspect(state)}")
 
     {
       :noreply,
-      %{:sub => state[:sub], :ack => true, :queue => :queue.peek(state[:queue])}
+      %{:sub => state[:sub], :ack => true, :queue => new_queue}
     }
   end
 
@@ -46,8 +47,6 @@ defmodule MessageBroker.Queue do
     if state[:ack] == true && !:queue.is_empty(state[:queue]) do
       queue = state[:queue]
       message = :queue.head(queue)
-      # send message
-      IO.inspect(message)
 
       {:ok, message_to_send} = Poison.encode(message)
 

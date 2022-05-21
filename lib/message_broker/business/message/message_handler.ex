@@ -1,5 +1,6 @@
 defmodule MessageBroker.MessageHandler do
   use GenServer
+  require Logger
 
   def start_link(_args) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
@@ -7,11 +8,9 @@ defmodule MessageBroker.MessageHandler do
 
   @impl true
   def handle_cast({:new_message, message, topic, socket}, state) do
-    # will also distribute the message based on topic
-
     case validate_topic(topic) do
       true ->
-        IO.puts("NEW MESSAGE AND TOPIC VALIDATED!")
+        Logger.info("New message validated")
         # also will store the messages to some storage
 
         AckUtil.send_back_ack("Message received and validated!", "", socket)
@@ -19,6 +18,7 @@ defmodule MessageBroker.MessageHandler do
 
       false ->
         AckUtil.send_back_ack("Message received but not validated!", "", socket)
+        Logger.info("Message not validated")
         {:noreply, state}
     end
   end
