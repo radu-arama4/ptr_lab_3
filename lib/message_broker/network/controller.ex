@@ -18,19 +18,19 @@ defmodule MessageBroker.Controller do
   end
 
   def subscribe(socket, topic) do
-    IO.puts("SUBSCRIBING")
-    IO.inspect(socket)
+    Logger.info("New subscription from #{inspect(socket)}")
     GenServer.cast(MessageBroker.SubscribersKeeper, {:subscribe, socket, topic})
   end
 
   def unsubscribe(socket, topic) do
-    IO.puts("UNSUBSCRIBING")
+    Logger.info("Unsubscription from #{inspect(socket)}")
     GenServer.cast(MessageBroker.SubscribersKeeper, {:unsubscribe, socket, topic})
   end
 
   def acknowledge(socket, topic) do
     # will remove message from queue and from message handler
     GenServer.cast(MessageBroker.QueueManager, {:ack, socket, topic})
+
     IO.puts("NEW ACKNOWLEDGMENT")
   end
 

@@ -5,7 +5,11 @@ defmodule MessageBroker.Queue do
   def start_link(args) do
     queue = :queue.new()
 
-    GenServer.start_link(__MODULE__, %{:sub => args[:sub], :ack => true, :queue => queue}, args)
+    GenServer.start_link(
+      __MODULE__,
+      %{:sub => args[:sub], :topic => args[:topic], :ack => true, :queue => queue},
+      args
+    )
   end
 
   @impl true
@@ -26,7 +30,12 @@ defmodule MessageBroker.Queue do
 
     {
       :noreply,
-      %{:sub => state[:sub], :ack => state[:ack], :queue => :queue.in(message, state[:queue])}
+      %{
+        :sub => state[:sub],
+        :topic => state[:topic],
+        :ack => state[:ack],
+        :queue => :queue.in(message, state[:queue])
+      }
     }
   end
 
@@ -38,7 +47,7 @@ defmodule MessageBroker.Queue do
 
     {
       :noreply,
-      %{:sub => state[:sub], :ack => true, :queue => new_queue}
+      %{:sub => state[:sub], :topic => state[:topic], :ack => true, :queue => new_queue}
     }
   end
 
@@ -48,11 +57,19 @@ defmodule MessageBroker.Queue do
       queue = state[:queue]
       message = :queue.head(queue)
 
-      {:ok, message_to_send} = Poison.encode(message)
+      message_to_send = %Message{
+        :action => "PUBLISH",
+        :topic => state[:topic],
+        :message => message
+      }
 
-      MessageBroker.Controller.write_line(message_to_send, state[:sub])
+      {:ok, encoded_message} = Poison.encode(message_to_send)
+
+      MessageBroker.Controller.write_line(encoded_message, state[:sub])
       work()
-      {:noreply, %{:sub => state[:sub], :ack => false, :queue => state[:queue]}}
+
+      {:noreply,
+       %{:sub => state[:sub], :topic => state[:topic], :ack => false, :queue => state[:queue]}}
     else
       work()
       {:noreply, state}

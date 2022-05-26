@@ -13,7 +13,7 @@ defmodule MessageBroker.QueueManager do
     {:ok, pid} =
       DynamicSupervisor.start_child(
         MessageBroker.QueueSupervisor,
-        {MessageBroker.Queue, [sub: sub]}
+        {MessageBroker.Queue, [sub: sub, topic: topic]}
       )
 
     queues = Map.get(state, topic)
