@@ -43,6 +43,9 @@ defmodule MessageBroker.Queue do
   def handle_cast({:ack}, state) do
     {_peek, new_queue} = :queue.out(state[:queue])
 
+    # will delete the peek also from message_handler
+    GenServer.cast(MessageBroker.MessageHandler, {:delete_message, state[:sub], state[:topic]})
+
     Logger.info("State - #{inspect(state)}")
 
     {

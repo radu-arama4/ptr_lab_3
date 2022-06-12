@@ -16,6 +16,9 @@ defmodule MessageBroker.QueueManager do
         {MessageBroker.Queue, [sub: sub, topic: topic]}
       )
 
+    # also add new one in message_handler
+    GenServer.cast(MessageBroker.MessageHandler, {:new_sub, sub, topic})
+
     queues = Map.get(state, topic)
 
     {:noreply, Map.put(state, topic, Enum.concat(queues, [pid]))}
@@ -33,6 +36,9 @@ defmodule MessageBroker.QueueManager do
 
         Logger.info("Consumer #{inspect(sub)} unsubscribed from #{inspect(topic)}")
         AckUtil.send_back_ack("User unsubscribed!", topic, sub)
+
+        # remove also from message_handler
+        GenServer.cast(MessageBroker.MessageHandler, {:delete_sub, sub, topic})
 
         GenServer.cast(
           MessageBroker.QueueManager,
