@@ -46,14 +46,6 @@ defmodule MessageBroker.MessageHandler do
     end
   end
 
-  # not used
-  defp store_message(message, topic) do
-    {:ok, table} = :dets.open_file(:messages, type: :set)
-    ack = false
-    # :dets.insert(table, {:messages, [{message, topic, ack}})
-    :dets.close(table)
-  end
-
   @impl true
   def handle_cast({:new_sub, sub, topic}, state) do
     topics_map = state[:messages]
@@ -87,9 +79,6 @@ defmodule MessageBroker.MessageHandler do
     end
   end
 
-  # TODO: function for removing message from queue and also changing the state of the queue
-  # ----------------------------------------------------------------------------
-
   def handle_cast({:delete_message, sub, topic}, state) do
     topics_map = state[:messages]
 
@@ -121,8 +110,6 @@ defmodule MessageBroker.MessageHandler do
     end
   end
 
-  # ----------------------------------------------------------------------------
-
   defp validate_topic(topic) do
     topics = GenServer.call(MessageBroker.TopicsProvider, {:get_topics})
 
@@ -137,7 +124,7 @@ defmodule MessageBroker.MessageHandler do
   end
 
   def backup_messages() do
-    Process.send_after(self(), {:extract_and_send}, 200)
+    Process.send_after(self(), {:store_messages}, 2000)
   end
 
   @impl true
@@ -147,8 +134,33 @@ defmodule MessageBroker.MessageHandler do
     {:noreply, state}
   end
 
+  # change the queues state to true and store messages
   @impl true
   def handle_info({:store_messages}, state) do
+    {:ok, table} = :dets.open_file(:messages, type: :set)
+
+    messages = state[:messages]
+    list_of_topics = Enum.map(messages, fn {topic, sub_map} -> {topic, sub_map} end)
+
+    messages_to_store =
+      Enum.reduce(list_of_topics, %{}, fn {topic, sub_map}, acc ->
+        list_of_sub = Enum.map(sub_map, fn {sub, map} -> {sub, map} end)
+
+        sub_map_to_store =
+          Enum.reduce(list_of_sub, %{}, fn {sub, map_of_queue_and_state}, acc ->
+            new_map_of_queue_and_state = Map.put(map_of_queue_and_state, :ack_state, true)
+            Map.put(acc, sub, new_map_of_queue_and_state)
+          end)
+
+        Map.put(acc, topic, sub_map_to_store)
+      end)
+
+    :dets.insert(table, {:messages, messages_to_store})
+    :dets.close(table)
+
+    backup_messages()
+
+    {:noreply, state}
   end
 
   # updates the state of a specific queue
@@ -223,18 +235,15 @@ defmodule MessageBroker.MessageHandler do
         Logger.info("Creating a new file for storing messages")
         map = init_table(table)
         extract_messages()
+        backup_messages()
         {:ok, %{:messages => map}}
 
       [_map] ->
         Logger.info("The messages file is not empty")
         map = :dets.lookup(table, :messages)
         extract_messages()
-
-        # will have a function for init messages state
-
+        backup_messages()
         {:ok, %{:messages => map[:messages]}}
-
-      # if not empty, transfer this to internal state
 
       _ ->
         Logger.error("Cannot open the file!")
